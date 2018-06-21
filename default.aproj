@@ -1,7 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<project ver="10" name="setodo" libEmbed="true" icon="res\setodo_logo.ico" ui="win" output="setodo.exe" CompanyName="bituplink" FileDescription="日常轻单 (simple everyday todo)" LegalCopyright="Copyright (C) bituplink 2018" ProductName="setodo" InternalName="setodo" FileVersion="0.0.0.20" ProductVersion="0.0.0.20" publishDir="/Publish/" dstrip="false">
-	<file name="main.aardio" path="main.aardio" comment="main.aardio"/>
-	<folder name="资源文件" path="res" embed="true">
-		<file name="setodo_logo.ico" path="res\setodo_logo.ico" comment="res\setodo_logo.ico"/>
-	</folder>
-</project>
