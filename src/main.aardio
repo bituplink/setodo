@@ -8,13 +8,13 @@ import fsys.ini;
 import fsys.dlg;
 import process;
 /*DSG{{*/
-mainForm = win.form(text="日常轻单 v0.6 by bituplink.com";right=383;bottom=465;border="dialog frame";max=false)
+mainForm = win.form(text="日常轻单 v0.7 by bituplink.com";right=383;bottom=465;border="dialog frame";max=false)
 mainForm.add(
 btnAddTodo={cls="button";text="添加";left=318;top=14;right=370;bottom=40;z=1};
 checklistDone={cls="checklist";left=14;top=282;right=370;bottom=445;edge=1;font=LOGFONT(strike=1;h=-14);items={};z=4};
 checklistTodo={cls="checklist";left=14;top=77;right=370;bottom=240;edge=1;font=LOGFONT(h=-14);items={};z=3};
 editAddTodo={cls="edit";left=14;top=15;right=309;bottom=41;edge=1;font=LOGFONT(h=-14);z=2};
-static1={cls="static";text="待办列表";left=14;top=51;right=75;bottom=69;notify=1;transparent=1;z=6};
+static1={cls="static";text="待办列表";left=14;top=51;right=76;bottom=68;notify=1;transparent=1;z=6};
 static2={cls="static";text="完成列表";left=14;top=257;right=75;bottom=275;transparent=1;z=5}
 )
 /*}}*/
@@ -37,7 +37,6 @@ var dayString = tostring(timeNow);
 // 生成当天的存储文件
 iniData = fsys.ini("\data\setodo_" + dayString + ".ini");
 
-
 function loadIniFile(){
 	var iniDataList = iniData.readSectionNames();
 
@@ -59,6 +58,7 @@ function loadIniFile(){
 
 loadIniFile();
 
+/*主要逻辑代码{{*/
 // 添加待办记录内容到列表的功能
 function addCntToList(){
 	// 字符串长度为零，没有输入，不处理
@@ -78,7 +78,7 @@ mainForm.btnAddTodo.oncommand = function(id,event){
 	addCntToList();
 }
 
-//消息回调不起作用,是因为回车键是对话框的快捷键之一,可以重写mainForm.isDialogMessage函数
+// 消息回调不起作用,是因为回车键是对话框的快捷键之一,可以重写mainForm.isDialogMessage函数
 mainForm.isDialogMessage = function(hwnd,msg){  
     if (   (msg.message >= 0x100/*_WM_KEYFIRST*/) && (msg.message <= 0x108/*_WM_KEYLAST*/) ) { 
         if(msg.wParam==0xD/*_VK_ENTER*/){ 
@@ -92,14 +92,14 @@ mainForm.isDialogMessage = function(hwnd,msg){
 mainForm.editAddTodo.wndproc = function(hwnd,message,wparam,lparam){
     select(message) {//判断消息类型
         case 0x100/*_WM_KEYDOWN*/ {
-            if(wparam == 0xD/*_VK_RETURN*/ or wparam == 0x20/*_VK_SPACE*/){
+            if(wparam == 0xD/*_VK_RETURN*/){
                 addCntToList();
             }
         }   
     }
 }
   
-//  勾选待办事项实现转移到已完成的功能
+// 勾选待办事项实现转移到已完成的功能
 mainForm.checklistTodo.onnotify = function(id,code,ptr){
 	
 	if( code == 0xFFFFFF9B/*_LVN_ITEMCHANGED*/ ){ 
@@ -126,7 +126,7 @@ mainForm.checklistTodo.onnotify = function(id,code,ptr){
  	 
  	 	var x,y = win.getMessagePos();  
  	 	var nmListView = mainForm.checklistTodo.getNotifyMessage(code,ptr);
- 	 	//创建弹出菜单
+ 	 	// 创建弹出菜单
 		var popmenu = win.ui.popmenu(mainForm); 
 		popmenu.add('删除',function(id){ 
 				mainForm.checklistTodo.delItem( nmListView.iItem )
@@ -149,7 +149,7 @@ mainForm.checklistTodo.onnotify = function(id,code,ptr){
  
 }
 
-//  去勾选已完成事项实现转移到待办的功能
+// 去勾选已完成事项实现转移到待办的功能
 mainForm.checklistDone.onnotify = function(id,code,ptr){
 
 	if( code == 0xFFFFFF9B/*_LVN_ITEMCHANGED*/ ){ 
@@ -173,18 +173,46 @@ mainForm.checklistDone.onnotify = function(id,code,ptr){
  	 
  	 	var x,y = win.getMessagePos();  
  	 	var nmListView = mainForm.checklistDone.getNotifyMessage(code,ptr);
- 	 	//创建弹出菜单
+ 	 	// 创建弹出菜单
 		var popmenu = win.ui.popmenu(mainForm); 
 		popmenu.add('删除',function(id){ 
 				mainForm.checklistDone.delItem( nmListView.iItem )
 		} ) 
 		popmenu.popup(x,y,true);
 		popmenu.close();
- 	 }  
-    
+ 	 } 
 }
 
+// 程序退出处理代码
+function saveIniFile(){
+    iniData.write("ToDoList",null) 
+	iniData.write("DoneList",null) 
 
+    var todoList = mainForm.checklistTodo.items;	
+	for(i=1;#todoList;1){
+      	keyString = "list" + i;
+ 	  	iniData.write("ToDoList",keyString,mainForm.checklistTodo.getItemText(i,1));
+	}
+			
+    var doneList = mainForm.checklistDone.items;	
+	for(i=1;#doneList;1){
+      	keyString = "list" + i;
+ 	  	iniData.write("DoneList",keyString,mainForm.checklistDone.getItemText(i,1));
+	}
+}
+
+// 软件退出前保存数据
+mainForm.wndproc = function(hwnd,message,wparam,lparam){
+    select(message) {   //判断消息类型
+        case 0x10/*_WM_CLOSE*/  //窗口关闭消息
+        {
+			saveIniFile();
+        }
+    }
+}
+/*}}*/
+
+/*程序界面吸附边栏的代码{{*/
 // 增加窗口贴边停靠吸附到上左右边栏的功能
 var side = "";
 mainForm.wndproc = function(hwnd,msg,wParam,lParam){
@@ -238,7 +266,7 @@ dock = function(bl){
                     win.delay(delnum)
                 }
                 }
-        }case "top"{
+            }case "top"{
                 if(mainForm.top = 0){ 
                 for(i=1;countnum;1){
                     n = (i=countnum) ? 4 : height - (height/countnum)*i;
@@ -322,40 +350,14 @@ var tmId = mainForm.addtimer(
         }
     }
 )
+/*}}*/
 
-// 
-function saveIniFile(){
-    iniData.write("ToDoList",null) 
-	iniData.write("DoneList",null) 
-
-    var todoList = mainForm.checklistTodo.items;	
-	for(i=1;#todoList;1){
-      	keyString = "list" + i;
- 	  	iniData.write("ToDoList",keyString,mainForm.checklistTodo.getItemText(i,1));
-	}
-			
-    var doneList = mainForm.checklistDone.items;	
-	for(i=1;#doneList;1){
-      	keyString = "list" + i;
- 	  	iniData.write("DoneList",keyString,mainForm.checklistDone.getItemText(i,1));
-	}	
-}
-
-
-// 软件退出前保存数据
-mainForm.wndproc = function(hwnd,message,wparam,lparam){
-    select(message) {   //判断消息类型
-        case 0x10/*_WM_CLOSE*/  //窗口关闭消息
-        {
-			saveIniFile();
-        }
-    }
-}
-
-//创建主菜单
+/*软件功能区菜单代码{{*/
+// 创建主菜单
 var menu = win.ui.menu(mainForm);
 
-mainForm.popmenu = win.ui.popmenu(mainForm);//创建弹出菜单
+// 创建第一个弹出菜单
+mainForm.popmenu = win.ui.popmenu(mainForm);
 mainForm.popmenu.add('&打开文件',function(id){
 	// 未关闭窗口情况下切换记录文件也需要保存一次数据
 	saveIniFile();
@@ -376,9 +378,9 @@ mainForm.popmenu.add('&打开文件',function(id){
 
 menu.add('文件',mainForm.popmenu)
 
-//----分隔处
+// ----分隔处
 
-// 第二个菜单
+// 第二个弹出菜单
 mainForm.secondmenu = win.ui.popmenu(mainForm);//创建弹出菜单
 
 mainForm.secondmenu.add('&使用说明',function(id){
@@ -390,8 +392,9 @@ mainForm.secondmenu.add('&捐助',function(id){
 });
 
 menu.add('帮助', mainForm.secondmenu)
+/*}}*/
 
-
+/*托盘支持功能代码{{*/
 // 增加托盘功能支持，包括托盘图标，右键托盘功能列表，托盘鼠标时间等
 exeTray = win.util.tray(mainForm.hwnd);
 exeTray.message = 0xACCF/*_WM_TRAYMESSAGE*/;
@@ -440,8 +443,8 @@ mainForm.wndproc = function(hwnd,message,wparam,lparam){
 
 mainForm.onClose = function(hwnd,message,wParam,lParam){
     exeTray.delete();
-} 
-
+}
+/*}}*/
 
 mainForm.enableDpiScaling();
 mainForm.show();
