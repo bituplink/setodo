@@ -8,14 +8,15 @@ import fsys.ini;
 import fsys.dlg;
 import process;
 /*DSG{{*/
-mainForm = win.form(text="日常轻单 v0.7 by bituplink.com";right=383;bottom=465;border="dialog frame";max=false)
+mainForm = win.form(text="日常轻单 v0.8 by bituplink.com";right=383;bottom=465;border="dialog frame";max=false)
 mainForm.add(
 btnAddTodo={cls="button";text="添加";left=318;top=14;right=370;bottom=40;z=1};
 checklistDone={cls="checklist";left=14;top=282;right=370;bottom=445;edge=1;font=LOGFONT(strike=1;h=-14);items={};z=4};
 checklistTodo={cls="checklist";left=14;top=77;right=370;bottom=240;edge=1;font=LOGFONT(h=-14);items={};z=3};
 editAddTodo={cls="edit";left=14;top=15;right=309;bottom=41;edge=1;font=LOGFONT(h=-14);z=2};
 static1={cls="static";text="待办列表";left=14;top=51;right=76;bottom=68;notify=1;transparent=1;z=6};
-static2={cls="static";text="完成列表";left=14;top=257;right=75;bottom=275;transparent=1;z=5}
+static2={cls="static";text="完成列表";left=14;top=257;right=75;bottom=275;transparent=1;z=5};
+staticDate={cls="static";left=89;top=51;right=183;bottom=69;transparent=1;z=7}
 )
 /*}}*/
 
@@ -38,6 +39,9 @@ var dayString = tostring(timeNow);
 iniData = fsys.ini("\data\setodo_" + dayString + ".ini");
 
 function loadIniFile(){
+	// 更新显示文件记录的日期
+    mainForm.staticDate.text = dayString;
+	
 	var iniDataList = iniData.readSectionNames();
 
 	// 有数据则加载到应用
@@ -52,7 +56,7 @@ function loadIniFile(){
     	for(k,v in sectionDone){
     		addIndex = mainForm.checklistDone.addItem(v);
     		mainForm.checklistDone.setChecked(addIndex);
-    	} 
+    	}
 	}
 }
 
@@ -359,21 +363,28 @@ var menu = win.ui.menu(mainForm);
 // 创建第一个弹出菜单
 mainForm.popmenu = win.ui.popmenu(mainForm);
 mainForm.popmenu.add('&打开文件',function(id){
-	// 未关闭窗口情况下切换记录文件也需要保存一次数据
-	saveIniFile();
-	
+
 	// 打开之前保存的记录
 	var fileLoaded = fsys.dlg.open("指定文件|setodo_*.ini|","选择打开历史记录文件","/data");
 	
-	var fileLoadedName = io.splitpath(fileLoaded).file;
+	// 用户取消加载新文件的处理
+	if(fileLoaded!=null){
+	    // 未关闭窗口情况下切换记录文件也需要保存一次数据
+	    saveIniFile();
 	
-	iniData = fsys.ini("\data\" + fileLoadedName);
+	    var fileLoadedName = io.splitpath(fileLoaded).file;
 	
-	mainForm.checklistTodo.clear();
-	mainForm.checklistDone.clear();
+	    // 获取并刷新日期变量
+	    dayString = string.sub(fileLoadedName, 8, 15);
+	    
+	    iniData = fsys.ini("\data\" + fileLoadedName);
 	
-	// 软件重新加载选定文件的记录信息
-	loadIniFile();
+	    mainForm.checklistTodo.clear();
+	    mainForm.checklistDone.clear();
+	
+	    // 软件重新加载选定文件的记录信息
+	    loadIniFile();
+	}
 });
 
 menu.add('文件',mainForm.popmenu)
