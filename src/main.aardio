@@ -7,16 +7,18 @@ import mouse;
 import fsys.ini;
 import fsys.dlg;
 import process;
+import console;
 /*DSG{{*/
-mainForm = win.form(text="日常轻单 v0.8 by bituplink.com";right=383;bottom=465;border="dialog frame";max=false)
+mainForm = win.form(text="日常轻单 v0.9 by bituplink.com";right=383;bottom=465;border="dialog frame";max=false)
 mainForm.add(
 btnAddTodo={cls="button";text="添加";left=318;top=14;right=370;bottom=40;z=1};
 checklistDone={cls="checklist";left=14;top=282;right=370;bottom=445;edge=1;font=LOGFONT(strike=1;h=-14);items={};z=4};
 checklistTodo={cls="checklist";left=14;top=77;right=370;bottom=240;edge=1;font=LOGFONT(h=-14);items={};z=3};
+datetimepick={cls="datetimepick";left=82;top=47;right=189;bottom=73;edge=1;font=LOGFONT(h=-13);z=7};
 editAddTodo={cls="edit";left=14;top=15;right=309;bottom=41;edge=1;font=LOGFONT(h=-14);z=2};
 static1={cls="static";text="待办列表";left=14;top=51;right=76;bottom=68;notify=1;transparent=1;z=6};
 static2={cls="static";text="完成列表";left=14;top=257;right=75;bottom=275;transparent=1;z=5};
-staticDate={cls="static";left=89;top=51;right=183;bottom=69;transparent=1;z=7}
+staticTop={cls="static";text="窗口置顶";left=216;top=51;right=271;bottom=67;notify=1;transparent=1;z=8}
 )
 /*}}*/
 
@@ -31,17 +33,21 @@ if(!atom){
 // 增加双击修改内容的样式能力
 mainForm.checklistTodo.modifyStyle(,0x200/*_LVS_EDITLABELS*/)
 
-var timeNow =time.now() ; 
-timeNow.format = "%Y%m%d";
-var dayString = tostring(timeNow);
-
-// 生成当天的存储文件
-iniData = fsys.ini("\data\setodo_" + dayString + ".ini");
-
 function loadIniFile(){
-	// 更新显示文件记录的日期
-    mainForm.staticDate.text = dayString;
 	
+	// 加载数据前清空旧数据
+	mainForm.checklistTodo.clear();
+	mainForm.checklistDone.clear();	
+	
+	var dayTime = mainForm.datetimepick.time;
+	dayTime.format="%Y%m%d";
+	
+	var dayString = tostring(dayTime)
+	//console.varDump(dayString)
+	
+	// 当前日期对应的存储文件路径
+	iniData = fsys.ini("\data\setodo_" + dayString + ".ini");
+
 	var iniDataList = iniData.readSectionNames();
 
 	// 有数据则加载到应用
@@ -389,13 +395,14 @@ mainForm.popmenu.add('&打开文件',function(id){
 
 menu.add('文件',mainForm.popmenu)
 
+
 // ----分隔处
 
 // 第二个弹出菜单
 mainForm.secondmenu = win.ui.popmenu(mainForm);//创建弹出菜单
 
 mainForm.secondmenu.add('&使用说明',function(id){
-	process.execute("http://www.bituplink.com/setodo");	
+	process.execute("http://www.bituplink.com/windows_setodo.html");	
 });
 
 mainForm.secondmenu.add('&捐助',function(id){
@@ -456,6 +463,26 @@ mainForm.onClose = function(hwnd,message,wParam,lParam){
     exeTray.delete();
 }
 /*}}*/
+
+// 修改时间要尝试加载文件
+mainForm.datetimepick.onnotify = function(id,code,ptr){
+	
+	if(code == 0xFFFFFD09/*_DTN_DATETIMECHANGE*/ ){ 
+		saveIniFile();
+		loadIniFile();
+	}
+
+}
+
+mainForm.staticTop.oncommand = function(id,event){
+	if(mainForm.staticTop.text = "窗口置顶"){
+		win.setTopmost(mainForm.hwnd,true)
+		mainForm.staticTop.text = "取消置顶"
+	}else{
+		win.setTopmost(mainForm.hwnd,false)
+		mainForm.staticTop.text = "窗口置顶"
+	}
+}
 
 mainForm.enableDpiScaling();
 mainForm.show();
