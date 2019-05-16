@@ -14,11 +14,11 @@ mainForm.add(
 btnAddTodo={cls="button";text="添加";left=318;top=14;right=370;bottom=40;z=1};
 checklistDone={cls="checklist";left=14;top=282;right=370;bottom=445;edge=1;font=LOGFONT(strike=1;h=-14);items={};z=4};
 checklistTodo={cls="checklist";left=14;top=77;right=370;bottom=240;edge=1;font=LOGFONT(h=-14);items={};z=3};
-datetimepick={cls="datetimepick";left=82;top=47;right=189;bottom=73;edge=1;font=LOGFONT(h=-13);z=7};
+datetimepick={cls="datetimepick";left=82;top=47;right=241;bottom=73;edge=1;font=LOGFONT(h=-13);z=7};
 editAddTodo={cls="edit";left=14;top=15;right=309;bottom=41;edge=1;font=LOGFONT(h=-14);z=2};
 static1={cls="static";text="待办列表";left=14;top=51;right=76;bottom=68;notify=1;transparent=1;z=6};
 static2={cls="static";text="完成列表";left=14;top=257;right=75;bottom=275;transparent=1;z=5};
-staticTop={cls="static";text="窗口置顶";left=216;top=51;right=271;bottom=67;notify=1;transparent=1;z=8}
+staticTop={cls="static";text="窗口置顶";left=251;top=51;right=306;bottom=67;notify=1;transparent=1;z=8}
 )
 /*}}*/
 
