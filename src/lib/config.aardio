@@ -4,16 +4,16 @@ config  = ..fsys.config("/config/");
 
 /**
 config  = ..fsys.config( 
-	..fsys.joinpath( ..fsys.getSpecial( 0x1c /*_CSIDL_LOCAL_APPDATA*/  ),"应用程序名" ) 
+	..fsys.joinpath( ..fsys.getSpecial( 0x1c /*_CSIDL_LOCAL_APPDATA*/  ),"setodo" ) 
 ); 
 **/
 
 //不需要序列化的配置名字前请添加下划线
 namespace config {
-	__appName = "应用程序名";
-	__appVersion = "1.0.0.01";
-	__appDescription = "这是一个测试程序";
-	__website = "http://www.aardio.com/";
+	__appName = "setodo";
+	__appVersion = "0.9";
+	__appDescription = "setodo程序";
+	__website = "http://www.bituplink.com/";
 }
 
 /**intellisense(config)
