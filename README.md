@@ -1,7 +1,10 @@
 # setodo
 这是一个简单的每日待办事项管理软件,轻巧绿色,满足基本的操作需求,基于aardio开发
 
-![snapshot](http://bituplink.com/assets/img/setodo.png)
+##### 更新记录:
+*. 20190516 setodo v0.9版本发布 增加窗口置顶功能,增加日历控件,可以灵活选择时间记录待办事项
+
+![snapshot](https://imgsrc.io/images/2019/05/16/setodo_v0.9.png)
 
 ##### 程序优点:  
 1. win平台全支持,无需其他额外的组件支持
@@ -13,10 +16,11 @@
 7. 支持托盘图标,最小化到托盘,双击托盘显示
 8. 支持回车输入待办事项内容
 9. 待办事项内容支持鼠标双击修改
+10. 支持窗口置顶,支持日历控件
 
 ##### 获得exe执行程序
 * github releases下载: [releases](https://github.com/bituplink/setodo/releases)
-* 访问官网下载: [官网](http://bituplink.com/setodo)
+* 访问官网下载: [官网](http://www.bituplink.com/windows_setodo.html)
 * 访问百度云盘下载: [百度网盘](https://pan.baidu.com/s/16WB0jVsT61h0XSuIaCa6MQ) 密码: d7vr
 * 下载源码,并使用[aardio IDE](http://ide.update.aardio.com/releases/aardio.7z)加载项目文件(src目录下),运行并发布后,在publish目录下获得
 
@@ -27,6 +31,7 @@
 * 已完成列表项勾选可以将内容重新标记为待办事项,并将内容转移到上方的列表显示
 * 对于需要删除的内容,右键删除
 * 点击菜单栏文件->打开文件选择历史记录文件,可以加载显示,历史记录文件按照时间命名,不需要的可以手动删除文件
+* 点击日历控件可以选择时间,来回点击窗口置顶,可以切换窗口置顶状态
 
 
 ### 建议和改进
