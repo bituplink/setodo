@@ -5,22 +5,30 @@ import win.util.tray;
 import winex;
 import mouse;
 import fsys.ini;
+import win.ui.tooltip; 
 import fsys.dlg;
 import process;
 import console;
+import util;
 /*DSG{{*/
-mainForm = win.form(text="日常轻单 v0.9 by bituplink.com";right=383;bottom=465;border="dialog frame";max=false)
+mainForm = win.form(text="日常轻单 v0.98 by bituplink.com";right=404;bottom=522;border="dialog frame";composited=1;max=false)
 mainForm.add(
-btnAddTodo={cls="button";text="添加";left=318;top=14;right=370;bottom=40;z=1};
-checklistDone={cls="checklist";left=14;top=282;right=370;bottom=445;edge=1;font=LOGFONT(strike=1;h=-14);items={};z=4};
-checklistTodo={cls="checklist";left=14;top=77;right=370;bottom=240;edge=1;font=LOGFONT(h=-14);items={};z=3};
-datetimepick={cls="datetimepick";left=82;top=47;right=241;bottom=73;edge=1;font=LOGFONT(h=-13);z=7};
-editAddTodo={cls="edit";left=14;top=15;right=309;bottom=41;edge=1;font=LOGFONT(h=-14);z=2};
-static1={cls="static";text="待办列表";left=14;top=51;right=76;bottom=68;notify=1;transparent=1;z=6};
-static2={cls="static";text="完成列表";left=14;top=257;right=75;bottom=275;transparent=1;z=5};
-staticTop={cls="static";text="窗口置顶";left=251;top=51;right=306;bottom=67;notify=1;transparent=1;z=8}
+btnAddTodo={cls="button";text="添加";left=344;top=16;right=396;bottom=42;z=1};
+btnTodoTrans={cls="button";text="待办转移至";left=163;top=48;right=243;bottom=74;z=10};
+checklistDone={cls="checklist";left=10;top=324;right=394;bottom=507;edge=1;font=LOGFONT(strike=1;h=-14);items={};z=4};
+checklistTodo={cls="checklist";left=10;top=83;right=394;bottom=278;edge=1;font=LOGFONT(h=-14);items={};z=3};
+datetimepick={cls="datetimepick";left=71;top=48;right=157;bottom=74;edge=1;font=LOGFONT(h=-13);z=7};
+datetimepickTrans={cls="datetimepick";left=248;top=48;right=336;bottom=74;edge=1;font=LOGFONT(h=-13);z=9};
+editAddTodo={cls="edit";left=10;top=16;right=336;bottom=42;edge=1;font=LOGFONT(h=-14);z=2};
+static1={cls="static";text="待办列表";left=10;top=53;right=72;bottom=69;notify=1;transparent=1;z=6};
+static2={cls="static";text="完成列表";left=10;top=298;right=65;bottom=319;transparent=1;z=5};
+staticTop={cls="static";text="窗口置顶";left=336;top=299;right=391;bottom=320;notify=1;transparent=1;z=8}
 )
 /*}}*/
+
+// debug
+// console.varDump()
+
 
 // 单实例运行功能
 var atom,hwndConflict = mainForm.atom("21FD3719-8C39-4D33-8DC2-9B0103A4DE69");   
@@ -30,43 +38,66 @@ if(!atom){
     return;  
 };
 
+
+// 在窗口上创建tooltip对象, mainForm是界面主窗口的名称，可以改变，但是需要保持一致
+var toolTipObj = win.ui.tooltip(mainForm);
+
+// 给控件添加悬停提示, btnAddFile是之前创建的按键控件的名称， 0x10/*_TTF_SUBCLASS*/参数表示默认提示
+toolTipObj.addTool(mainForm.btnTodoTrans, "默认转移当前所有待办项，也可以鼠标右键转移每一个待办项", 0x10/*_TTF_SUBCLASS*/ );
+toolTipObj.addTool(mainForm.datetimepickTrans, "默认转移到明天，也可以自选任意日期", 0x10/*_TTF_SUBCLASS*/ );
+
+
 // 增加双击修改内容的样式能力
 mainForm.checklistTodo.modifyStyle(,0x200/*_LVS_EDITLABELS*/)
+
 
 function loadIniFile(){
 	
 	// 加载数据前清空旧数据
 	mainForm.checklistTodo.clear();
 	mainForm.checklistDone.clear();	
+	todoLevelTable = {};
 	
 	var dayTime = mainForm.datetimepick.time;
-	dayTime.format="%Y%m%d";
 	
+	// 默认设置转移的日期为下一天
+	var dayOriginTime = mainForm.datetimepick.time
+	var defaultNextDayTime = dayOriginTime.addday(1);
+	mainForm.datetimepickTrans.time = defaultNextDayTime;
+	
+	dayTime.format="%Y%m%d";
 	var dayString = tostring(dayTime)
-	//console.varDump(dayString)
 	
 	// 当前日期对应的存储文件路径
 	iniData = fsys.ini("\data\setodo_" + dayString + ".ini");
 
 	var iniDataList = iniData.readSectionNames();
+	
+	mainForm.checklistTodo.clrText=0x000000
+	mainForm.checklistTodo.redraw()
 
 	// 有数据则加载到应用
 	if(iniDataList!=null){
-	
+		
 		sectionTodo = iniData.getSection("ToDoList");
-    	for(k,v in sectionTodo){
-    		mainForm.checklistTodo.addItem(v);
+    	for( k,v in sectionTodo){
+    		mainForm.checklistTodo.addItem(v, tonumber(k));
+    		changeTodoLevel(tonumber(k), 0)
     	}
     	
     	sectionDone = iniData.getSection("DoneList");
-    	for(k,v in sectionDone){
-    		addIndex = mainForm.checklistDone.addItem(v);
-    		mainForm.checklistDone.setChecked(addIndex);
+    	for( k,v in sectionDone){
+    		mainForm.checklistDone.addItem(v, tonumber(k));
+    		mainForm.checklistDone.setChecked(k);
+    	}
+    	
+    	sectionToDoLevel = iniData.getSection("ToDoLevelList");
+    	for(k,v in sectionToDoLevel){
+    		changeTodoLevel(tonumber(k), v)
     	}
 	}
 }
 
-loadIniFile();
 
 /*主要逻辑代码{{*/
 // 添加待办记录内容到列表的功能
@@ -77,16 +108,19 @@ function addCntToList(){
 	}
 
     // 将文本框内容增加到待办列表
-	mainForm.checklistTodo.addItem(mainForm.editAddTodo.text);
+	addItemIndex = mainForm.checklistTodo.addItem(mainForm.editAddTodo.text);
+	changeTodoLevel(addItemIndex, 0)
 	
 	// 输入文本框清空,方便用户下次重新输入
 	mainForm.editAddTodo.text = "";	
 }
 
+
 // 将输入文本框的内容放置到待办事项列表中，增加待办事项
 mainForm.btnAddTodo.oncommand = function(id,event){
 	addCntToList();
 }
+
 
 // 消息回调不起作用,是因为回车键是对话框的快捷键之一,可以重写mainForm.isDialogMessage函数
 mainForm.isDialogMessage = function(hwnd,msg){  
@@ -98,6 +132,7 @@ mainForm.isDialogMessage = function(hwnd,msg){
     return win.isDialogMessage(hwnd,msg);   
 }
 
+
 // 回车事件处理，调用增加输入内容到待办列表中
 mainForm.editAddTodo.wndproc = function(hwnd,message,wparam,lparam){
     select(message) {//判断消息类型
@@ -108,11 +143,98 @@ mainForm.editAddTodo.wndproc = function(hwnd,message,wparam,lparam){
         }   
     }
 }
-  
+
+
+// 单个待办事项转移函数
+function transTodo(itemIndex, cntStr){
+	
+	var selectDayTime = mainForm.datetimepickTrans.time;
+	
+	selectDayTime.format="%Y%m%d";
+	var selectDayString = tostring(selectDayTime)
+	
+	// 当前日期对应的存储文件路径
+	var selectIniData = fsys.ini("\data\setodo_" + selectDayString + ".ini");
+
+    var todoList = selectIniData.readKeys("ToDoList");	
+    
+    var transSeq = #todoList + 1
+    
+    keyString = "" + transSeq;
+ 	selectIniData.write("ToDoList", keyString, cntStr);
+ 	
+	// 把优先级也要写过去
+	transColor = todoLevelTable[tostring(itemIndex)];
+	selectIniData.write("ToDoLevelList", keyString, transColor);
+}
+
+
+// 在全局变量中设置待办事项的优先级
+function changeTodoLevel(checkListItemIndex, levelNum){
+	
+	var keyName = "" + checkListItemIndex
+	
+	// 将待办事项的优先级信息存储到全局变量
+	todoLevelTable[keyName] = levelNum
+	
+	int_levelNum = tonumber(levelNum)
+	
+	// 按照不同的级别设置颜色 switch case , 其中1 2 3分别为高 中 低优先级, 对应 0x0045FF 0x20A5DA 0x32CD32
+	// 0是默认的级别，就是字体的颜色，此处是黑色
+	select (int_levelNum){
+		case 0{
+				mainForm.checklistTodo._clrText[checkListItemIndex]=0x000000
+    			mainForm.checklistTodo.redraw()
+		}
+		case 1{
+    			mainForm.checklistTodo._clrText[checkListItemIndex]=0x0045FF
+    			mainForm.checklistTodo.redraw()
+		}
+		case 2{
+			    mainForm.checklistTodo._clrText[checkListItemIndex]=0xD00614
+    			mainForm.checklistTodo.redraw()
+		}
+		case 3{
+			    mainForm.checklistTodo._clrText[checkListItemIndex]=0x32CD32
+    			mainForm.checklistTodo.redraw()
+		}
+
+	}	
+}
+
+// 批量
+function autoBatchChangeColor(seqNum){
+	var todoList = mainForm.checklistTodo.items;
+	for(i=seqNum; #todoList; 1){
+		
+		var nextIndex = i+1
+		changeLevelColor = todoLevelTable[tostring(nextIndex)]
+		changeTodoLevel(i, changeLevelColor)
+	}	
+}
+
+
 // 勾选待办事项实现转移到已完成的功能
 mainForm.checklistTodo.onnotify = function(id,code,ptr){
 	
-	if( code == 0xFFFFFF9B/*_LVN_ITEMCHANGED*/ ){ 
+	if( code == 0xFFFFFFF4/*_NM_CUSTOMDRAW*/ ){
+    	owner._clrText:=..table.array(owner.count,owner.columnCount,0);
+    	
+        var lvcd = owner.getNotifyCustomDraw(code,ptr);
+        
+        if( lvcd.nmcd.dwDrawStage == 0x10001/*_CDDS_ITEMPREPAINT*/)
+                return 0x20/*_CDRF_NOTIFYSUBITEMDRAW*/
+        elseif( lvcd.nmcd.dwDrawStage == 1/*_CDDS_PREPAINT*/ ){
+                return 0x20/*_CDRF_NOTIFYITEMDRAW*/;
+        }
+        elseif( lvcd.nmcd.dwDrawStage == ( 0x10001/*_CDDS_ITEMPREPAINT*/ | 0x20000/*_CDDS_SUBITEM*/) ){
+			lvcd.clrText=owner._clrText[lvcd.nmcd.dwItemSpec+1];
+		
+			lvcd.update()
+			return 0/*_CDRF_DODEFAULT*/
+        }
+    }
+	elseif( code == 0xFFFFFF9B/*_LVN_ITEMCHANGED*/ ){ 
  	 	var nmChecklist = mainForm.checklistTodo.getNotifyMessage(code,ptr);
  	 	if( !nmChecklist )
  	 		return;
@@ -129,20 +251,58 @@ mainForm.checklistTodo.onnotify = function(id,code,ptr){
  	 			
  	 			// 将待办事项转移后，删除待办列表中的记录
  	 			mainForm.checklistTodo.delItem(selIndex);
+ 	 			
+ 	 			//changeTodoLevel(selIndex, 0)
+ 	 			autoBatchChangeColor(selIndex)
  	 		} 
  	 	}  
  	 }
  	 elseif( code = 0xFFFFFFFB/*_NM_RCLICK*/ ){
  	 
- 	 	var x,y = win.getMessagePos();  
  	 	var nmListView = mainForm.checklistTodo.getNotifyMessage(code,ptr);
+ 	 	
  	 	// 创建弹出菜单
 		var popmenu = win.ui.popmenu(mainForm); 
+		
 		popmenu.add('删除',function(id){ 
 				mainForm.checklistTodo.delItem( nmListView.iItem )
+				
+				autoBatchChangeColor(nmListView.iItem)
+				
 		} ) 
-		popmenu.popup(x,y,true);
+		
+		popmenu.add('转移待办',function(id){ 
+				var transTodoCnt = mainForm.checklistTodo.getItemText(nmListView.iItem,1)
+				transTodo(nmListView.iItem, transTodoCnt)
+				
+				mainForm.checklistTodo.delItem( nmListView.iItem )
+				
+				// 这块也要写优先级的处理逻辑,优先级重回需要网上刷
+				autoBatchChangeColor(nmListView.iItem)
+				
+		} ) 
+		
+		popmenu.add('设置高优先级',function(id){ 
+				changeTodoLevel( nmListView.iItem, 1)
+		} ) 
+		
+		popmenu.add('设置中优先级',function(id){ 
+				changeTodoLevel( nmListView.iItem, 2)
+		} ) 
+		
+		popmenu.add('设置低优先级',function(id){ 
+				changeTodoLevel( nmListView.iItem, 3)
+		} ) 
+		
+		popmenu.add('清除优先级',function(id){ 
+				changeTodoLevel( nmListView.iItem, 0)
+		} ) 
+		
+		// 在最后一次鼠标事件的位置弹出，采用默认方式
+		popmenu.popup();
+		
 		popmenu.close();
+			
  	 }
  	 elseif(code = 0xFFFFFF51/*_LVN_BEGINLABELEDITW*/ ){ 
 	 	return false; //允许编辑项
@@ -159,7 +319,7 @@ mainForm.checklistTodo.onnotify = function(id,code,ptr){
  
 }
 
-// 去勾选已完成事项实现转移到待办的功能
+// 去勾选已完成事项实现状态变为到待办的功能
 mainForm.checklistDone.onnotify = function(id,code,ptr){
 
 	if( code == 0xFFFFFF9B/*_LVN_ITEMCHANGED*/ ){ 
@@ -175,6 +335,8 @@ mainForm.checklistDone.onnotify = function(id,code,ptr){
  	 			
  	 			mainForm.checklistTodo.setChecked(checkListAddIndex,false);
  	 			
+ 	 			changeTodoLevel(checkListAddIndex, 0)
+ 	 			
  	 			mainForm.checklistDone.delItem(selIndex);
  	 		} 
  	 	}  
@@ -183,12 +345,14 @@ mainForm.checklistDone.onnotify = function(id,code,ptr){
  	 
  	 	var x,y = win.getMessagePos();  
  	 	var nmListView = mainForm.checklistDone.getNotifyMessage(code,ptr);
+ 	 	
  	 	// 创建弹出菜单
 		var popmenu = win.ui.popmenu(mainForm); 
 		popmenu.add('删除',function(id){ 
 				mainForm.checklistDone.delItem( nmListView.iItem )
 		} ) 
 		popmenu.popup(x,y,true);
+		
 		popmenu.close();
  	 } 
 }
@@ -197,17 +361,22 @@ mainForm.checklistDone.onnotify = function(id,code,ptr){
 function saveIniFile(){
     iniData.write("ToDoList",null) 
 	iniData.write("DoneList",null) 
-
-    var todoList = mainForm.checklistTodo.items;	
+	iniData.write("ToDoLevelList",null)
+	
+    var todoList = mainForm.checklistTodo.items;
 	for(i=1;#todoList;1){
-      	keyString = "list" + i;
+      	keyString = "" + i;
  	  	iniData.write("ToDoList",keyString,mainForm.checklistTodo.getItemText(i,1));
 	}
 			
     var doneList = mainForm.checklistDone.items;	
 	for(i=1;#doneList;1){
-      	keyString = "list" + i;
+      	keyString = "" + i;
  	  	iniData.write("DoneList",keyString,mainForm.checklistDone.getItemText(i,1));
+	}
+	
+	for k, v in todoLevelTable{
+		iniData.write("ToDoLevelList", tostring(k) , tostring(v));
 	}
 }
 
@@ -457,6 +626,7 @@ mainForm.wndproc = function(hwnd,message,wparam,lparam){
             return true;//阻击默认消息传递，取消最小化过程
         } 
     }
+                    
 }  
 
 mainForm.onClose = function(hwnd,message,wParam,lParam){
@@ -471,7 +641,25 @@ mainForm.datetimepick.onnotify = function(id,code,ptr){
 		saveIniFile();
 		loadIniFile();
 	}
+}
 
+// 修改转移时间要判断禁止修改至当天
+mainForm.datetimepickTrans.onnotify = function(id,code,ptr){
+	
+	if(code == 0xFFFFFD09/*_DTN_DATETIMECHANGE*/ ){ 
+		var dayTime = mainForm.datetimepick.time;
+	
+		// 默认设置转移的日期为下一天
+		var dayTransTime = mainForm.datetimepickTrans.time
+		
+		if(dayTime.diffday(dayTransTime) == 0){
+			mainForm.msgbox("不能设置转移时间为当天!")
+			
+			// 把时间设置回明天
+			var defaultNextDayTime = dayTransTime.addday(1);
+			mainForm.datetimepickTrans.time = defaultNextDayTime;	
+		}
+	}
 }
 
 mainForm.staticTop.oncommand = function(id,event){
@@ -484,7 +672,21 @@ mainForm.staticTop.oncommand = function(id,event){
 	}
 }
 
+mainForm.btnTodoTrans.oncommand = function(id,event){
+	// 批量转移所有的待办事项到指定的日期
+	var todoList = mainForm.checklistTodo.items;	
+	for(i=1;#todoList;1){
+ 	  	transTodo(i, mainForm.checklistTodo.getItemText(i,1))	
+	}
+	
+	mainForm.checklistTodo.clear();
+}
+
+
 mainForm.enableDpiScaling();
 mainForm.show();
 
+loadIniFile();
+
 return win.loopMessage();
+
