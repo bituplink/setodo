@@ -11,7 +11,7 @@ config  = ..fsys.config(
 //不需要序列化的配置名字前请添加下划线
 namespace config {
 	__appName = "setodo";
-	__appVersion = "0.9";
+	__appVersion = "0.98";
 	__appDescription = "setodo程序";
 	__website = "http://www.bituplink.com/";
 }
