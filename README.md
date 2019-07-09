@@ -2,9 +2,10 @@
 这是一个简单的每日待办事项管理软件,轻巧绿色,满足基本的操作需求,基于aardio开发
 
 ##### 更新记录:
+*. 20190709 setodo v0.98版本发布 增加右键设置待办事项优先级三色显示,增加右键转移单个待办和批量转移所有待办功能
 *. 20190516 setodo v0.9版本发布 增加窗口置顶功能,增加日历控件,可以灵活选择时间记录待办事项
 
-![snapshot](https://imgsrc.io/images/2019/05/16/setodo_v0.9.png)
+![snapshot](https://imgsrc.io/images/2019/07/09/Snipaste_2019-07-09_13-35-01.png)
 
 ##### 程序优点:  
 1. win平台全支持,无需其他额外的组件支持
@@ -17,11 +18,13 @@
 8. 支持回车输入待办事项内容
 9. 待办事项内容支持鼠标双击修改
 10. 支持窗口置顶,支持日历控件
+11. 支持设置待办事项优先级颜色显示
+12. 支持单个待办事项和全部待办的转移操作
 
 ##### 获得exe执行程序
 * github releases下载: [releases](https://github.com/bituplink/setodo/releases)
 * 访问官网下载: [官网](http://www.bituplink.com/windows_setodo.html)
-* 访问百度云盘下载: [百度网盘](https://pan.baidu.com/s/16WB0jVsT61h0XSuIaCa6MQ) 密码: d7vr
+* 访问百度云盘下载: [百度网盘](https://pan.baidu.com/s/1Sv-t_-SeKxdzik1nyxQxaw) 密码: 15ds
 * 下载源码,并使用[aardio IDE](http://ide.update.aardio.com/releases/aardio.7z)加载项目文件(src目录下),运行并发布后,在publish目录下获得
 
 ### 运行说明
@@ -32,6 +35,8 @@
 * 对于需要删除的内容,右键删除
 * 点击菜单栏文件->打开文件选择历史记录文件,可以加载显示,历史记录文件按照时间命名,不需要的可以手动删除文件
 * 点击日历控件可以选择时间,来回点击窗口置顶,可以切换窗口置顶状态
+* 右键单个待办选择优先级或转移操作
+* 点击日历控件可以选择时间,执行批量全部转移待办到指定日期
 
 
 ### 建议和改进
