@@ -10,6 +10,7 @@ import fsys.dlg;
 import process;
 import console;
 import util;
+import fsys.lnk;
 /*DSG{{*/
 mainForm = win.form(text="日常轻单 v0.98 by bituplink.com";right=404;bottom=522;border="dialog frame";composited=1;max=false)
 mainForm.add(
@@ -22,6 +23,7 @@ datetimepickTrans={cls="datetimepick";left=248;top=48;right=336;bottom=74;edge=1
 editAddTodo={cls="edit";left=10;top=16;right=336;bottom=42;edge=1;font=LOGFONT(h=-14);z=2};
 static1={cls="static";text="待办列表";left=10;top=53;right=72;bottom=69;notify=1;transparent=1;z=6};
 static2={cls="static";text="完成列表";left=10;top=298;right=65;bottom=319;transparent=1;z=5};
+staticStartup={cls="static";text="开机不启动";left=256;top=299;right=328;bottom=320;notify=1;transparent=1;z=11};
 staticTop={cls="static";text="窗口置顶";left=336;top=299;right=391;bottom=320;notify=1;transparent=1;z=8}
 )
 /*}}*/
@@ -29,6 +31,11 @@ staticTop={cls="static";text="窗口置顶";left=336;top=299;right=391;bottom=32
 // debug
 // console.varDump()
 
+// 增加用户设置项配置能力
+import config;
+mainForm.bindConfig( config.mainForm,{
+    static = "text"
+} );
 
 // 单实例运行功能
 var atom,hwndConflict = mainForm.atom("21FD3719-8C39-4D33-8DC2-9B0103A4DE69");   
@@ -52,6 +59,12 @@ mainForm.checklistTodo.modifyStyle(,0x200/*_LVS_EDITLABELS*/)
 
 
 function loadIniFile(){
+	
+	config.mainForm.load();
+	
+	if(mainForm.staticTop.text = "窗口置顶"){
+		win.setTopmost(mainForm.hwnd,true)
+	}
 	
 	// 加载数据前清空旧数据
 	mainForm.checklistTodo.clear();
@@ -666,9 +679,11 @@ mainForm.staticTop.oncommand = function(id,event){
 	if(mainForm.staticTop.text = "窗口置顶"){
 		win.setTopmost(mainForm.hwnd,true)
 		mainForm.staticTop.text = "取消置顶"
+		config.mainForm.save();
 	}else{
 		win.setTopmost(mainForm.hwnd,false)
 		mainForm.staticTop.text = "窗口置顶"
+		config.mainForm.save();
 	}
 }
 
@@ -682,6 +697,42 @@ mainForm.btnTodoTrans.oncommand = function(id,event){
 	mainForm.checklistTodo.clear();
 }
 
+// 开启/关闭开机启动
+enableStartup = function(app, enable){  
+        if ( enable ) {
+            var lnk = fsys.lnk(); 
+            lnk.path = app;         //设置目标路径
+            lnk.setIcon(app, 0);    //设置图标
+             
+            return lnk.save(
+                fsys.joinpath( 
+                    fsys.getSpecial( 0x0007 /*_CSIDL_STARTUP*/  )
+                    , ..io.splitpath(app).name + ".lnk"
+                    )
+            ) 
+        }
+        else {
+            var lnkpath = fsys.joinpath( fsys.getSpecial( 0x0007 /*_CSIDL_STARTUP*/ ), ..io.splitpath(app).name + ".lnk");
+            if( ..io.exist(lnkpath) ){
+                fsys.delete(lnkpath);
+            }
+             
+            return true; 
+        }
+    }
+
+mainForm.staticStartup.oncommand = function(id,event){
+	exe_path = io._exepath
+	if(mainForm.staticStartup.text = "开机不启动"){
+		enableStartup(exe_path,true)
+		mainForm.staticStartup.text = "开机启动"
+		config.mainForm.save();
+	}else{
+		enableStartup(exe_path,false)
+		mainForm.staticStartup.text = "开机不启动"
+		config.mainForm.save();
+	}
+}
 
 mainForm.enableDpiScaling();
 mainForm.show();
@@ -689,4 +740,3 @@ mainForm.show();
 loadIniFile();
 
 return win.loopMessage();
-
