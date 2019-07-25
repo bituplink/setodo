@@ -45,7 +45,7 @@
 
 ### 建议和改进
 1. github提issue
-2. 发送邮件到 bituplink@protonmail.com
+2. 发送邮件到 bituplink@foxmail.com
 
 
 ### 捐助
