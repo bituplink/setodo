@@ -4,6 +4,7 @@ import win.ui.atom;
 import win.util.tray;
 import winex;
 import mouse;
+import fsys.table;
 import fsys.ini;
 import win.ui.tooltip; 
 import fsys.dlg;
@@ -11,31 +12,30 @@ import process;
 import console;
 import util;
 import fsys.lnk;
+import win.ui.minmax;
 /*DSG{{*/
-mainForm = win.form(text="日常轻单 v0.98 by bituplink.com";right=404;bottom=522;border="dialog frame";composited=1;max=false)
+mainForm = win.form(text="日常轻单 v0.99 by bituplink.com";right=404;bottom=522;composited=1;max=false)
 mainForm.add(
-btnAddTodo={cls="button";text="添加";left=344;top=16;right=396;bottom=42;z=1};
-btnTodoTrans={cls="button";text="待办转移至";left=163;top=48;right=243;bottom=74;z=10};
-checklistDone={cls="checklist";left=10;top=324;right=394;bottom=507;edge=1;font=LOGFONT(strike=1;h=-14);items={};z=4};
-checklistTodo={cls="checklist";left=10;top=83;right=394;bottom=278;edge=1;font=LOGFONT(h=-14);items={};z=3};
-datetimepick={cls="datetimepick";left=71;top=48;right=157;bottom=74;edge=1;font=LOGFONT(h=-13);z=7};
-datetimepickTrans={cls="datetimepick";left=248;top=48;right=336;bottom=74;edge=1;font=LOGFONT(h=-13);z=9};
-editAddTodo={cls="edit";left=10;top=16;right=336;bottom=42;edge=1;font=LOGFONT(h=-14);z=2};
-static1={cls="static";text="待办列表";left=10;top=53;right=72;bottom=69;notify=1;transparent=1;z=6};
-static2={cls="static";text="完成列表";left=10;top=298;right=65;bottom=319;transparent=1;z=5};
-staticStartup={cls="static";text="开机不启动";left=256;top=299;right=328;bottom=320;notify=1;transparent=1;z=11};
-staticTop={cls="static";text="窗口置顶";left=336;top=299;right=391;bottom=320;notify=1;transparent=1;z=8}
+btnAddTodo={cls="button";text="添加";left=344;top=16;right=396;bottom=42;dr=1;dt=1;z=1};
+btnTodoTrans={cls="button";text="待办转移至";left=163;top=48;right=243;bottom=74;dl=1;dt=1;z=9};
+checklistDone={cls="checklist";left=10;top=324;right=394;bottom=507;ah=1;aw=1;dl=1;edge=1;font=LOGFONT(strike=1;h=-14);items={};z=4};
+checklistTodo={cls="checklist";left=10;top=83;right=394;bottom=278;ah=1;aw=1;dl=1;dt=1;edge=1;font=LOGFONT(h=-14);items={};z=3};
+datetimepick={cls="datetimepick";left=71;top=48;right=157;bottom=74;dl=1;dt=1;edge=1;font=LOGFONT(h=-13);z=7};
+datetimepickTrans={cls="datetimepick";left=248;top=48;right=336;bottom=74;dl=1;dt=1;edge=1;font=LOGFONT(h=-13);z=8};
+editAddTodo={cls="edit";left=10;top=16;right=336;bottom=42;aw=1;dl=1;dr=1;dt=1;edge=1;font=LOGFONT(h=-14);z=2};
+static1={cls="static";text="待办列表";left=10;top=56;right=72;bottom=69;dl=1;dt=1;notify=1;transparent=1;z=6};
+static2={cls="static";text="完成列表";left=10;top=298;right=64;bottom=319;dl=1;transparent=1;z=5}
 )
 /*}}*/
 
 // debug
 // console.varDump()
 
-// 增加用户设置项配置能力
-import config;
-mainForm.bindConfig( config.mainForm,{
-    static = "text"
-} );
+
+// 设置框体最小和最大的宽度和高度
+
+win.ui.minmax(mainForm,420,560)
+
 
 // 单实例运行功能
 var atom,hwndConflict = mainForm.atom("21FD3719-8C39-4D33-8DC2-9B0103A4DE69");   
@@ -58,13 +58,27 @@ toolTipObj.addTool(mainForm.datetimepickTrans, "默认转移到明天，也可�
 mainForm.checklistTodo.modifyStyle(,0x200/*_LVS_EDITLABELS*/)
 
 
+// 设置全局文件所在路径 
+exe_path = io._exepath
+
+
 function loadIniFile(){
 	
-	config.mainForm.load();
+	setting = fsys.table("/config/setting.table") 
+	setting.load(); //从文件载入表
 	
-	if(mainForm.staticTop.text = "窗口置顶"){
+	// 加载设置文件，更新界面的设置状态
+	if(setting.isTopWindow == true){
 		win.setTopmost(mainForm.hwnd,true)
+		mainForm.cfgmenu.check(2)
 	}
+	
+	if(setting.isStartup == true){
+		mainForm.cfgmenu.check(1)
+	}
+	
+	mainForm.width = setting.mf_width
+	mainForm.height = setting.mf_height
 	
 	// 加载数据前清空旧数据
 	mainForm.checklistTodo.clear();
@@ -391,6 +405,11 @@ function saveIniFile(){
 	for k, v in todoLevelTable{
 		iniData.write("ToDoLevelList", tostring(k) , tostring(v));
 	}
+	
+    // 保存记忆窗体的大小
+	setting.mf_height = mainForm.height
+	setting.mf_width = mainForm.width
+	setting.save();
 }
 
 // 软件退出前保存数据
@@ -404,153 +423,13 @@ mainForm.wndproc = function(hwnd,message,wparam,lparam){
 }
 /*}}*/
 
-/*程序界面吸附边栏的代码{{*/
-// 增加窗口贴边停靠吸附到上左右边栏的功能
-var side = "";
-mainForm.wndproc = function(hwnd,msg,wParam,lParam){
-    select(msg){
-        case 0x3/*_WM_MOVE*/  {//移动窗口
-            if(!mainForm.processing){//不在处理中
-                checkWindowPos()
-            }
-        }case 0xA1/*_WM_NCLBUTTONDOWN*/ {//按下左键移动窗口
-            side=""
-        }case 0xA0/*_WM_NCMOUSEMOVE*/{//在标题栏及窗的边框体移动鼠标
-            checkWindowPos()
-        }
-    }
-}
-
-checkWindowPos = function(){
-    var scrw = win.getScreen();
-    var left,top,width = win.getPos(mainForm.hwnd,true);
-    var right = left + width;
-    if(left <= 0 )  side = "left";
-    if(scrw <= right) side = "right";           
-    if(top <= 0)  side = "top";
-    if(left>0 && top>0 && scrw>right )  side = ""
-}
-
-dock = function(bl){
-    if( win.isIconic(mainForm.hwnd) and mainForm.docking and  side != ""){
-        mainForm.show( 0x1/*_SW_NORMAL*/ )
-    }elseif(win.isIconic(mainForm.hwnd)){//缩至任务栏不处理后续语句
-        return;
-    }
-    if(mainForm.processing){return ; }//正在处理
-    mainForm.processing = true;
-    var arg = bl ? {0xC00000/*_WS_CAPTION*/;null} : {null;0xC00000/*_WS_CAPTION*/};
-    mainForm.modifyStyle(table.unpack(arg)); 
-        
-    var scrw = win.getScreen();
-    var n;
-    var countnum = 10;
-    var delnum = 1;
-    var left,top,width,height = win.getPos(mainForm.hwnd,true);
-    if(bl){//逐渐隐藏
-        select(side) {
-            case "left"{
-                if(mainForm.left = 0){
-                for(i=1;countnum;1){
-                    n = (i=countnum) ? 4 : width - (width/countnum)*i;
-                    mainForm.left = -width + n;
-                    mainForm.right = n;
-                    win.delay(delnum)
-                }
-                }
-            }case "top"{
-                if(mainForm.top = 0){ 
-                for(i=1;countnum;1){
-                    n = (i=countnum) ? 4 : height - (height/countnum)*i;
-                    mainForm.top = -height + n;
-                    mainForm.bottom = n;
-                    win.delay(delnum)
-                }
-                }
-            }case "right"{
-                if(mainForm.right = scrw){
-                for(i=1;countnum;1){
-                    n = (i=countnum) ? 4 : width - (width/countnum)*i;
-                    mainForm.left = scrw - n;
-                    mainForm.right = scrw -n + width;
-                    win.delay(delnum)
-                }
-                }
-            }
-        }
-    }else{
-        if(mainForm.docking){//逐渐恢复
-            win.setTopmost(mainForm.hwnd);
-            win.setTopmost(mainForm.hwnd,false)
-            select(side) {
-                case "left"{
-                    if(mainForm.right = 4){
-                        for(i=countnum;1;-1){
-                            n = (i=1) ? width : width - (width/countnum)*i;
-                            mainForm.left = -width + n;
-                            mainForm.right = n;
-                            win.delay(delnum)
-                        }
-                    }
-                }case "top"{
-                    if(mainForm.bottom = 4){
-                        for(i=countnum;1;-1){
-                            n = (i=1) ? height : height - (height/countnum)*i;
-                            mainForm.top = -height + n;
-                            mainForm.bottom = n;
-                            win.delay(delnum)
-                        }
-                    }
-                }case "right"{
-                    if(mainForm.left = scrw-4){
-                        for(i=countnum;1;-1){
-                            n = (i=1) ? width : width - (width/countnum)*i;
-                            mainForm.left = scrw - n;
-                            mainForm.right = scrw -n + width;
-                            win.delay(delnum)
-                        }
-                    }
-                }
-            }
-        }
-    }
-    left,top,width,height = win.getPos(mainForm.hwnd,true);
-    select(side) {
-        case "left"{
-            mainForm.left = bl ? (-width+4) : (!mainForm.docking ? left : 0); //鼠标窗口内，分未吸附和已吸附两种情况
-            mainForm.right = bl ? 4 : (!mainForm.docking ? (width + left) : width);
-        }case "top"{
-            mainForm.top = bl ? (-height+4) : (!mainForm.docking ? top : 0);
-            mainForm.bottom = bl ? 4 : (!mainForm.docking ? (height + top) : height);     
-        }case "right"{
-            mainForm.left = bl ? (scrw-4) : (!mainForm.docking ? mainForm.left : scrw-width);
-            mainForm.right = bl ? (scrw-4 + width) : (!mainForm.docking ? mainForm.right : scrw);
-        }
-    }
-    mainForm.docking = bl ? true : false;//记录状态
-    mainForm.processing = false;//处理完
-}
-
-var tmId = mainForm.addtimer(
-    100,
-    function(){
-        var hwnd = winex.fromPoint( mouse.getPos() );
-        if(win.getThreadProcessId(hwnd)  !== thread.getId()){ //判断鼠标是否在窗体内
-            if(#side>0) dock(true); //side为空字串说明在中间或底部，无需处理
-        }else{     
-            if(#side>0) dock(false);
-        }
-    }
-)
-/*}}*/
-
 /*软件功能区菜单代码{{*/
 // 创建主菜单
 var menu = win.ui.menu(mainForm);
 
 // 创建第一个弹出菜单
-mainForm.popmenu = win.ui.popmenu(mainForm);
-mainForm.popmenu.add('&打开文件',function(id){
+mainForm.filemenu = win.ui.popmenu(mainForm);
+mainForm.filemenu.add('&打开文件',function(id){
 
 	// 打开之前保存的记录
 	var fileLoaded = fsys.dlg.open("指定文件|setodo_*.ini|","选择打开历史记录文件","/data");
@@ -575,23 +454,71 @@ mainForm.popmenu.add('&打开文件',function(id){
 	}
 });
 
-menu.add('文件',mainForm.popmenu)
+menu.add('文件',mainForm.filemenu)
 
 
 // ----分隔处
 
-// 第二个弹出菜单
-mainForm.secondmenu = win.ui.popmenu(mainForm);//创建弹出菜单
 
-mainForm.secondmenu.add('&使用说明',function(id){
+mainForm.cfgmenu = win.ui.popmenu(mainForm);//创建设置菜单
+
+mainForm.cfgmenu.add('&开机启动',function(id){
+	if (mainForm.cfgmenu.checked(1)) {
+         // 已经设置开启启动，再次点击取消开机启动
+         mainForm.cfgmenu.check(1,false);
+                
+         enableStartup(exe_path,false);
+		 
+		 setting.isStartup = false;
+         setting.save();
+                
+    } else {
+         mainForm.cfgmenu.check(1);
+                
+         enableStartup(exe_path,true);
+         
+		 setting.isStartup = true;
+         setting.save();
+    }
+});
+
+mainForm.cfgmenu.add('&窗口置顶',function(id){
+	if (mainForm.cfgmenu.checked(2)) {
+         
+         mainForm.cfgmenu.check(2,false);
+         
+         win.setTopmost(mainForm.hwnd,false);
+         
+         setting.isTopWindow = false;
+         setting.save();
+                
+    } else {
+         mainForm.cfgmenu.check(2);
+                
+         win.setTopmost(mainForm.hwnd,true)
+		 
+		 setting.isTopWindow = true;
+         setting.save();
+    }
+});
+
+menu.add('设置', mainForm.cfgmenu)
+
+
+// ----分隔处
+
+
+mainForm.infomenu = win.ui.popmenu(mainForm);//创建信息菜单
+
+mainForm.infomenu.add('&使用说明',function(id){
 	process.execute("http://www.bituplink.com/windows_setodo.html");	
 });
 
-mainForm.secondmenu.add('&捐助',function(id){
+mainForm.infomenu.add('&捐助',function(id){
 	process.execute("http://www.bituplink.com/donate");
 });
 
-menu.add('帮助', mainForm.secondmenu)
+menu.add('帮助', mainForm.infomenu)
 /*}}*/
 
 /*托盘支持功能代码{{*/
@@ -675,27 +602,6 @@ mainForm.datetimepickTrans.onnotify = function(id,code,ptr){
 	}
 }
 
-mainForm.staticTop.oncommand = function(id,event){
-	if(mainForm.staticTop.text = "窗口置顶"){
-		win.setTopmost(mainForm.hwnd,true)
-		mainForm.staticTop.text = "取消置顶"
-		config.mainForm.save();
-	}else{
-		win.setTopmost(mainForm.hwnd,false)
-		mainForm.staticTop.text = "窗口置顶"
-		config.mainForm.save();
-	}
-}
-
-mainForm.btnTodoTrans.oncommand = function(id,event){
-	// 批量转移所有的待办事项到指定的日期
-	var todoList = mainForm.checklistTodo.items;	
-	for(i=1;#todoList;1){
- 	  	transTodo(i, mainForm.checklistTodo.getItemText(i,1))	
-	}
-	
-	mainForm.checklistTodo.clear();
-}
 
 // 开启/关闭开机启动
 enableStartup = function(app, enable){  
@@ -720,18 +626,16 @@ enableStartup = function(app, enable){
             return true; 
         }
     }
+ 
 
-mainForm.staticStartup.oncommand = function(id,event){
-	exe_path = io._exepath
-	if(mainForm.staticStartup.text = "开机不启动"){
-		enableStartup(exe_path,true)
-		mainForm.staticStartup.text = "开机启动"
-		config.mainForm.save();
-	}else{
-		enableStartup(exe_path,false)
-		mainForm.staticStartup.text = "开机不启动"
-		config.mainForm.save();
+mainForm.btnTodoTrans.oncommand = function(id,event){
+	// 批量转移所有的待办事项到指定的日期
+	var todoList = mainForm.checklistTodo.items;	
+	for(i=1;#todoList;1){
+ 	  	transTodo(i, mainForm.checklistTodo.getItemText(i,1))	
 	}
+	
+	mainForm.checklistTodo.clear();
 }
 
 mainForm.enableDpiScaling();
